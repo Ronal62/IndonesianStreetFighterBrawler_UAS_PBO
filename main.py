@@ -1,169 +1,148 @@
 import pygame
 from pygame import mixer
-from fighter import Fighter
+from fighter import Warrior, Wizard
 
+# Inisialisasi mixer dan pygame
 mixer.init()
 pygame.init()
 
-# Create game window
+# Buat jendela permainan
 SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 600
-
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Brawler")
 
-# Set framerate
+# Atur framerate
 clock = pygame.time.Clock()
 FPS = 60
 
-# Define colours
+# Definisi warna
 RED = (255, 0, 0)
 WHITE = (255, 255, 255)
 
-# Define game variables
+# Variabel permainan
 intro_count = 3
 last_count_update = pygame.time.get_ticks()
-score = [0, 0]  # Player scores. [P1, P2]
+score = [0, 0]  # Skor pemain [P1, P2]
 round_over = False
 ROUND_OVER_COOLDOWN = 2000
 
-# Define fighter variables
-WARRIOR_SIZE = 162
-WARRIOR_SCALE = 4
-WARRIOR_OFFSET = [72, 56]
-WARRIOR_DATA = [WARRIOR_SIZE, WARRIOR_SCALE, WARRIOR_OFFSET]
-WIZARD_SIZE = 250
-WIZARD_SCALE = 3
-WIZARD_OFFSET = [112, 107]
-WIZARD_DATA = [WIZARD_SIZE, WIZARD_SCALE, WIZARD_OFFSET]
+# Data petarung
+WARRIOR_DATA = {"size": 162, "scale": 4, "offset": [72, 56]}
+WIZARD_DATA = {"size": 250, "scale": 3, "offset": [112, 107]}
 
-# Load music and sounds
-pygame.mixer.music.load("assets/audio/music.mp3")
-pygame.mixer.music.set_volume(0.5)
-pygame.mixer.music.play(-1, 0.0, 5000)
-sword_fx = pygame.mixer.Sound("assets/audio/sword.wav")
+# Muat musik dan suara
+mixer.music.load("assets/audio/music.mp3")
+mixer.music.set_volume(0.5)
+mixer.music.play(-1, 0.0, 5000)
+sword_fx = mixer.Sound("assets/audio/sword.wav")
 sword_fx.set_volume(0.5)
-magic_fx = pygame.mixer.Sound("assets/audio/magic.wav")
+magic_fx = mixer.Sound("assets/audio/magic.wav")
 magic_fx.set_volume(0.75)
 
-# Load background image
+# Muat gambar latar belakang
 bg_image = pygame.image.load("assets/images/background/background.jpg").convert_alpha()
 
-# Load spritesheets
+# Muat spritesheets
 warrior_sheet = pygame.image.load("assets/images/warrior/Sprites/warrior.png").convert_alpha()
 wizard_sheet = pygame.image.load("assets/images/wizard/Sprites/wizard.png").convert_alpha()
 
-# Load victory image
+# Muat gambar kemenangan
 victory_img = pygame.image.load("assets/images/icons/victory.png").convert_alpha()
 
-# Define number of steps in each animation
+# Langkah animasi petarung
 WARRIOR_ANIMATION_STEPS = [10, 8, 1, 7, 7, 3, 7]
 WIZARD_ANIMATION_STEPS = [8, 8, 1, 8, 8, 3, 7]
 
-# Define font
+# Definisi font
 count_font = pygame.font.Font("assets/fonts/turok.ttf", 80)
 score_font = pygame.font.Font("assets/fonts/turok.ttf", 30)
 
-# Function for drawing text
+# Fungsi untuk menggambar teks
 def draw_text(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
     screen.blit(img, (x, y))
 
-# Function for drawing background
+# Fungsi untuk menggambar latar belakang
 def draw_bg():
     scaled_bg = pygame.transform.scale(bg_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
     screen.blit(scaled_bg, (0, 0))
 
-# Function for drawing Indonesian-style fighter health bars
+# Fungsi untuk menggambar bilah kesehatan
 def draw_health_bar(health, x, y):
     ratio = health / 100
     bar_width = 400
     bar_height = 30
 
-    # Draw background bar (white)
+    # Gambar latar belakang bar (putih)
     pygame.draw.rect(screen, WHITE, (x - 2, y - 2, bar_width + 4, bar_height + 4))
 
-    # Draw red and white segments
-    pygame.draw.rect(screen, RED, (x, y, bar_width, bar_height))
-    pygame.draw.rect(screen, WHITE, (x, y + bar_height // 2, bar_width, bar_height // 2))
-
-    # Draw health overlay (remaining health in red)
+    # Gambar bar kesehatan (merah)
     pygame.draw.rect(screen, RED, (x, y, bar_width * ratio, bar_height))
 
-    # Add ornamental patterns (triangles below the bar)
-    for i in range(10):
-        pygame.draw.polygon(screen, WHITE, [
-            (x + i * 40, y + bar_height + 2),
-            (x + i * 40 + 20, y + bar_height + 12),
-            (x + i * 40 + 40, y + bar_height + 2)
-        ])
+# Buat dua instance petarung dengan inheritance
+fighter_1 = Warrior(1, 200, 310, False, WARRIOR_DATA, warrior_sheet, WARRIOR_ANIMATION_STEPS, sword_fx)
+fighter_2 = Wizard(2, 700, 310, True, WIZARD_DATA, wizard_sheet, WIZARD_ANIMATION_STEPS, magic_fx)
 
-# Create two instances of fighters
-fighter_1 = Fighter(1, 200, 310, False, WARRIOR_DATA, warrior_sheet, WARRIOR_ANIMATION_STEPS, sword_fx)
-fighter_2 = Fighter(2, 700, 310, True, WIZARD_DATA, wizard_sheet, WIZARD_ANIMATION_STEPS, magic_fx)
-
-# Game loop
+# Loop permainan
 run = True
 while run:
-
     clock.tick(FPS)
 
-    # Draw background
+    # Gambar latar belakang
     draw_bg()
 
-    # Show player stats
-    draw_health_bar(fighter_1.health, 20, 20)
-    draw_health_bar(fighter_2.health, 580, 20)
+    # Tampilkan statistik pemain
+    draw_health_bar(fighter_1.get_health(), 20, 20)
+    draw_health_bar(fighter_2.get_health(), 580, 20)
     draw_text("P1: " + str(score[0]), score_font, RED, 20, 60)
     draw_text("P2: " + str(score[1]), score_font, RED, 580, 60)
 
-    # Update countdown
+    # Perbarui countdown
     if intro_count <= 0:
-        # Move fighters
+        # Gerakkan petarung
         fighter_1.move(SCREEN_WIDTH, SCREEN_HEIGHT, screen, fighter_2, round_over)
         fighter_2.move(SCREEN_WIDTH, SCREEN_HEIGHT, screen, fighter_1, round_over)
     else:
-        # Display count timer
+        # Tampilkan countdown
         draw_text(str(intro_count), count_font, RED, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 3)
-        # Update count timer
+        # Perbarui timer countdown
         if (pygame.time.get_ticks() - last_count_update) >= 1000:
             intro_count -= 1
             last_count_update = pygame.time.get_ticks()
 
-    # Update fighters
+    # Perbarui dan gambar petarung
     fighter_1.update()
     fighter_2.update()
-
-    # Draw fighters
     fighter_1.draw(screen)
     fighter_2.draw(screen)
 
-    # Check for player defeat
+    # Periksa jika salah satu pemain kalah
     if not round_over:
-        if fighter_1.alive == False:
+        if not fighter_1.is_alive():
             score[1] += 1
             round_over = True
             round_over_time = pygame.time.get_ticks()
-        elif fighter_2.alive == False:
+        elif not fighter_2.is_alive():
             score[0] += 1
             round_over = True
             round_over_time = pygame.time.get_ticks()
     else:
-        # Display victory image
+        # Tampilkan gambar kemenangan
         screen.blit(victory_img, (360, 150))
         if pygame.time.get_ticks() - round_over_time > ROUND_OVER_COOLDOWN:
             round_over = False
             intro_count = 3
-            fighter_1 = Fighter(1, 200, 310, False, WARRIOR_DATA, warrior_sheet, WARRIOR_ANIMATION_STEPS, sword_fx)
-            fighter_2 = Fighter(2, 700, 310, True, WIZARD_DATA, wizard_sheet, WIZARD_ANIMATION_STEPS, magic_fx)
+            fighter_1.reset(200, 310)
+            fighter_2.reset(700, 310)
 
     # Event handler
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
 
-    # Update display
+    # Perbarui tampilan
     pygame.display.update()
 
-# Exit pygame
+# Keluar dari pygame
 pygame.quit()
